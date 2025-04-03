@@ -32,7 +32,7 @@ jobs:
     - name: Install and configure JFrog CLI
       run: |
         curl -fL https://install-cli.jfrog.io | sh
-        ./jfrog config add jfrog-server \
+        jf config add jfrog-server \
           --url=${{ secrets.JFROG_URL }} \
           --user=${{ secrets.JFROG_USERNAME }} \
           --password=${{ secrets.JFROG_PASSWORD }}
@@ -42,13 +42,13 @@ jobs:
         echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
     - name: re-pushing image with it's metadate for following scans
       run: |
-        ./jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG docker-dev \
+        jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG docker-dev \
         --build-name=$BUILD_NAME \
         --build-number=$BUILD_NUMBER
     - name: Collect environment variables
-      run: ./jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
     - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
-      run: ./jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER
+      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
   test-scan-and-verify:
       needs: build-and-push-dev
       runs-on: ubuntu-latest
@@ -77,9 +77,9 @@ jobs:
       - name: Install and configure JFrog CLI
         run: |
           curl -fL https://install-cli.jfrog.io | sh
-          ./jfrog config add jfrog-server \
+          jf  config add jfrog-server \
             --url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: ./jfrog xray scan --build=$BUILD_NAME/$BUILD_NUMBER
+        run: jf  xray scan --build=$BUILD_NAME/$BUILD_NUMBER
