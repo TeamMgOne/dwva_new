@@ -21,6 +21,9 @@ jobs:
     - name: Generate image tag
       run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
     
+    - name: Debug tag output
+      run: echo "${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG"
+
     - name: docker tag points to jfrog dev docker repo with dynamic image tag
       run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
 
