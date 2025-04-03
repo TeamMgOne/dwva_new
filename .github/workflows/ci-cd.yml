@@ -1,0 +1,30 @@
+name: DVWA CI/CD
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-push-dev:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository - loads the code to the runner
+      uses: actions/checkout@v3
+    
+    - name: Login to JFrog Docker Registry
+      run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+    
+    - name: Docker image build
+      run: docker build -t dvwa:latest .
+    
+    - name: Generate image tag
+      run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+    
+    - name: docker tag points to jfrog dev docker repo with dynamic image tag
+      run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+
+    - name: Push image to JFrog Dev
+      run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+
+      
