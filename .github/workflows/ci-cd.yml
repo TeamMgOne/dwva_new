@@ -31,7 +31,7 @@ jobs:
       run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
     - name: Install and configure JFrog CLI
       run: |
-        wget https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/cli-linux-amd64/jfrog
+        wget -O jfrog https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/latest/jfrog-cli-linux-amd64
         chmod +x ./jfrog
         ./jfrog config add jfrog-server --url=${{ secrets.JFROG_URL }} --user=${{ secrets.JFROG_USERNAME }} --password=${{ secrets.JFROG_PASSWORD }}
     - name: setting env vars so following scans can use
@@ -74,7 +74,7 @@ jobs:
         run: docker stop dvwa-test
       - name: Install and configure JFrog CLI
         run: |
-          wget https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/cli-linux-amd64/jfrog
+          wget -O jfrog https://releases.jfrog.io/artifactory/jfrog-cli/v2-jf/latest/jfrog-cli-linux-amd64
           chmod +x ./jfrog
           ./jfrog config add jfrog-server --url=${{ secrets.JFROG_URL }} --user=${{ secrets.JFROG_USERNAME }} --password=${{ secrets.JFROG_PASSWORD }}
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
