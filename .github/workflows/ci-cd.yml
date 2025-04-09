@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-push-dev:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
     steps:
     - name: Checkout repository - loads the code to the runner
       uses: actions/checkout@v3
@@ -21,8 +23,9 @@ jobs:
     - name: Generate image tag
       run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
     
-    - name: Debug tag output
-      run: echo "${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG"
+    - name: Generate image tag
+      id: set_tag
+      run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
     - name: docker tag points to jfrog dev docker repo with dynamic image tag
       run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
@@ -60,9 +63,9 @@ jobs:
       - name: authenticating JFROG to pull the dev repo
         run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin 
       - name: pulling the dev image(dev-$TAG)
-        run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+        run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       - name: running the image within a container
-        run: docker run -d -p 80:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+        run: docker run -d -p 80:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       - name: checking dvwa runs
         run: |
           STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://127.0.0.1:80)
@@ -82,4 +85,4 @@ jobs:
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: jf  xray scan --build=$BUILD_NAME/$BUILD_NUMBER
+        run: jf xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
