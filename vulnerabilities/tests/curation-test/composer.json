@@ -1,0 +1,7 @@
+{
+  "name": "dvwa/curation-test",
+  "description": "Test curation block with malicious PHP package",
+  "require": {
+    "symfony/dependency-injection": "v2.7.0"
+  }
+}
