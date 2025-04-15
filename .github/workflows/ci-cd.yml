@@ -105,4 +105,5 @@ jobs:
         run: jf plugin install xray
 
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: jf xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
+        run: jf xr scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
+
