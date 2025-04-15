@@ -32,13 +32,20 @@ jobs:
 
     - name: Push image to JFrog Dev
       run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
-    - name: Install and configure JFrog CLI
+    
+    - name: Install and configure JFrog CLI v1
       run: |
-        curl -fL https://install-cli.jfrog.io | sh
-        jf config add jfrog-server \
-          --url=${{ secrets.JFROG_URL }} \
-          --user=${{ secrets.JFROG_USERNAME }} \
-          --password=${{ secrets.JFROG_PASSWORD }}
+        # Download JFrog CLI v1
+        curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v1/1.53.2/jfrog-cli-linux-amd64/jfrog -o jfrog
+        chmod +x jfrog
+        sudo mv jfrog /usr/local/bin/jfrog
+    
+        # Configure JFrog CLI with Artifactory credentials
+        jfrog rt config --url=${{ secrets.JFROG_URL }} \
+                        --user=${{ secrets.JFROG_USERNAME }} \
+                        --password=${{ secrets.JFROG_PASSWORD }} \
+                        jfrog-server
+
     - name: setting env vars so following scans can use
       run: | 
         echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
