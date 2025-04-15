@@ -76,21 +76,21 @@ jobs:
           fi
       - name: debug exposed ports
         run: docker exec dvwa-test netstat -tulnp || ss -tulnp
-      - name: checking dvwa runs (with retry)
+      - name: checking dvwa runs
         run: |
           for i in {1..10}; do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://127.0.0.1:8080)
+            STATUS=$(curl -L -o /dev/null -s -w "%{http_code}" http://127.0.0.1:8080)
             if [ "$STATUS" -eq 200 ]; then
-              echo "DVWA is running successfully: HTTP 200 OK"
+              echo "DVWA is running and responded with 200 OK"
               exit 0
             fi
             echo "Attempt $i: DVWA not ready. HTTP status: $STATUS"
             sleep 5
           done
-      
-          echo "DVWA failed to respond properly after retries. Dumping logs..."
+          echo "DVWA failed to respond properly after retries."
           docker logs dvwa-test
           exit 1
+          
       - name: terminate dvwa docker container
         run: docker stop dvwa-test
       - name: Install and configure JFrog CLI
