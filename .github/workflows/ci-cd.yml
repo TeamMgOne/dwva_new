@@ -65,10 +65,10 @@ jobs:
       - name: pulling the dev image(dev-$TAG)
         run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       - name: running the image within a container
-        run: docker run -d -p 80:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+        run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       - name: checking dvwa runs
         run: |
-          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://127.0.0.1:80)
+          STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://127.0.0.1:8080)
           if [ "$STATUS" -eq 200 ]; then
             echo "DVWA is running successfully: HTTP 200 OK"
           else
