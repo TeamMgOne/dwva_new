@@ -66,6 +66,16 @@ jobs:
         run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       - name: running the image within a container
         run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+      - name: verify dvwa container is running
+        run: |
+          RUNNING=$(docker inspect -f '{{.State.Running}}' dvwa-test)
+          if [ "$RUNNING" != "true" ]; then
+            echo "Container is not running. Dumping logs:"
+            docker logs dvwa-test
+            exit 1
+          fi
+      - name: debug exposed ports
+        run: docker exec dvwa-test netstat -tulnp || ss -tulnp
       - name: checking dvwa runs (with retry)
         run: |
           for i in {1..10}; do
