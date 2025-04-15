@@ -41,7 +41,7 @@ jobs:
         sudo mv jfrog /usr/local/bin/jfrog
     
         # Configure JFrog CLI with Artifactory credentials
-        jfrog rt config --url=${{ secrets.JFROG_URL }} \
+        jfrog config --url=${{ secrets.JFROG_URL }} \
                         --user=${{ secrets.JFROG_USERNAME }} \
                         --password=${{ secrets.JFROG_PASSWORD }} \
                         jfrog-server
