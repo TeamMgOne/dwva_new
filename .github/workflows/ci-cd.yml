@@ -102,5 +102,6 @@ jobs:
             --password=${{ secrets.JFROG_PASSWORD }}
 
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: jf xr scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
+        run: jf xray scan --build dvwa-ci ${{ needs.build-and-push-dev.outputs.tag }}
+        
 
