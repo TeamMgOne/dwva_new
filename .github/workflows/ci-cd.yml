@@ -100,9 +100,6 @@ jobs:
             --url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
-      
-      - name: Install JFrog Xray plugin
-        run: jf plugin install xray
 
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
         run: jf xr scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
