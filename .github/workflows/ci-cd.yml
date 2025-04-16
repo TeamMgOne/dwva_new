@@ -115,11 +115,11 @@ jobs:
       
       - name: Configure JFrog CLI (v1)
         run: |
-          jfrog rt config --url=${{ secrets.JFROG_URL }} \
+          jf rt config --url=${{ secrets.JFROG_URL }} \
                           --user=${{ secrets.JFROG_USERNAME }} \
                           --password=${{ secrets.JFROG_PASSWORD }} \
                           jfrog-server
       
       - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: jfrog xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
+        run: jf xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
         
