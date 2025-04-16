@@ -48,8 +48,6 @@ jobs:
       run: | 
         echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
         echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-    - name: Set custom environment variable
-      run: echo "BUILD_HTMLI=<h1>san</h1>" >> $GITHUB_ENV
     
     - name: re-pushing image with it's metadate for following scans
       run: |
