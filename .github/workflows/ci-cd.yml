@@ -60,6 +60,14 @@ jobs:
     
     - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
       run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
+
+    - name: Add Git metadata for evidence
+      run: jf rt build-add-git .
+
+    - name: (Optional) Generate and attach SBOM
+      run: |
+        jf sbom generate --type=cyclonedx --output=sbom.json
+        jf rt build-add-sbom sbom.json --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
   
   test-scan-and-verify:
       
