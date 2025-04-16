@@ -44,17 +44,6 @@ jobs:
           export BUILD_NUMBER=${{ github.sha }}
           export TAG=${{ needs.build-and-push-dev.outputs.tag }}
       
-          # Rebuild image
-          docker build -t ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG .
-      
-          # Push to Artifactory
-          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
-            --build-name=$BUILD_NAME \
-            --build-number=$BUILD_NUMBER \
-            --url=${{ secrets.JFROG_URL }} \
-            --user=${{ secrets.JFROG_USERNAME }} \
-            --password=${{ secrets.JFROG_PASSWORD }}
-      
           jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER \
             --url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
