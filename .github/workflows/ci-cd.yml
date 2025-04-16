@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.set_tag.outputs.tag }}
+      htmli: ${{ steps.set_htmli.outputs.htmli }}
     steps:
       - name: Checkout repository - loads the code to the runner
         uses: actions/checkout@v3
@@ -23,14 +24,17 @@ jobs:
       - name: Generate image tag
         id: set_tag
         run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
-
+      
+      - name: Generate image tag
+        id: set_htmli
+        run: echo "<h1>Hi</h1>"
       - name: Tag image for JFrog
         run: |
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}<h1>Hi</h1>
+          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}${{ steps.set_htmli.outputs.htmli }}
 
       - name: Push image to JFrog Dev
-        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}<h1>Hi</h1>
+        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}${{ steps.set_htmli.outputs.htmli }}
 
       - name: Install JFrog CLI v1
         run: |
