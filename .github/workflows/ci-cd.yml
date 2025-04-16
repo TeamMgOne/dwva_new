@@ -45,12 +45,12 @@ jobs:
           export TAG=${{ needs.build-and-push-dev.outputs.tag }}
       
           jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER \
-            --url=${{ secrets.JFROG_URL }} \
+            -url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
       
           jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER \
-            --url=${{ secrets.JFROG_URL }} \
+            -url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
 
