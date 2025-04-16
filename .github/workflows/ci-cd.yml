@@ -30,7 +30,7 @@ jobs:
           docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
 
       - name: Push image to JFrog Dev
-        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ steps.set_tag.outputs.tag }}
 
       - name: Install JFrog CLI v1
         run: |
