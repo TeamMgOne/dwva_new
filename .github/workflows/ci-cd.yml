@@ -43,6 +43,10 @@ jobs:
           export BUILD_NAME=dvwa-ci
           export BUILD_NUMBER=${{ github.sha }}
       
+          # Pull the image from the registry so docker-push can work
+          docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER
+      
+          # Push to Artifactory (with build metadata)
           jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER docker-dev \
             --build-name=$BUILD_NAME \
             --build-number=$BUILD_NUMBER \
@@ -59,6 +63,7 @@ jobs:
             --url=${{ secrets.JFROG_URL }} \
             --user=${{ secrets.JFROG_USERNAME }} \
             --password=${{ secrets.JFROG_PASSWORD }}
+
 
   test-scan-and-verify:
     needs: build-and-push-dev
