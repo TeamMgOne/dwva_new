@@ -58,10 +58,10 @@ jobs:
         --build-number=$BUILD_NUMBER
     
     - name: Collect environment variables
-      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER $BUILD_HTMLI
+      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
     
     - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
-      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER $BUILD_HTMLI
+      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
   
   test-scan-and-verify:
       
