@@ -44,17 +44,17 @@ jobs:
           export BUILD_NUMBER=${{ github.sha }}
           export TAG=${{ needs.build-and-push-dev.outputs.tag }}
       
-          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER \
-            -url=${{ secrets.JFROG_URL }} \
-            --user=${{ secrets.JFROG_USERNAME }} \
-            --password=${{ secrets.JFROG_PASSWORD }}
+          # Configure Artifactory connection
+          jfrog rt config --url=${{ secrets.JFROG_URL }} \
+                          --user=${{ secrets.JFROG_USERNAME }} \
+                          --password=${{ secrets.JFROG_PASSWORD }} \
+                          --interactive=false
       
-          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER \
-            -url=${{ secrets.JFROG_URL }} \
-            --user=${{ secrets.JFROG_USERNAME }} \
-            --password=${{ secrets.JFROG_PASSWORD }}
-
-
+          # Collect env vars
+          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+      
+          # Publish build info
+          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER
 
   test-scan-and-verify:
     needs: build-and-push-dev
