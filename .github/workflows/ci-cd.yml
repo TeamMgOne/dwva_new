@@ -100,14 +100,16 @@ jobs:
           
       - name: terminate dvwa docker container
         run: docker stop dvwa-test
-      - name: Configure JFrog CLI (v1)
+      - name: Install JFrog CLI v1 and run Xray scan
+        env:
+          JFROG_CLI_JFROG_URL: ${{ secrets.JFROG_URL }}
+          JFROG_CLI_USER: ${{ secrets.JFROG_USERNAME }}
+          JFROG_CLI_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+          JFROG_CLI_OFFER_CONFIG: false
         run: |
-          jfrog rt config --url=${{ secrets.JFROG_URL }} \
-                          --user=${{ secrets.JFROG_USERNAME }} \
-                          --password=${{ secrets.JFROG_PASSWORD }} \
-                          jfrog-server
-
-      - name: Xray scan within jfrog over the JFROG build using the image in the previous job
-        run: jfrog xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
-        
+          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v1/1.53.2/jfrog-cli-linux-amd64/jfrog -o jfrog
+          chmod +x jfrog
+          sudo mv jfrog /usr/local/bin/jfrog
+      
+          jfrog xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
 
