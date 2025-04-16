@@ -48,6 +48,8 @@ jobs:
       run: | 
         echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
         echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+    - name: Set custom environment variable
+      run: echo "BUILD_HTMLI=<h1>san</h1>" >> $GITHUB_ENV
     
     - name: re-pushing image with it's metadate for following scans
       run: |
@@ -56,10 +58,10 @@ jobs:
         --build-number=$BUILD_NUMBER
     
     - name: Collect environment variables
-      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER $BUILD_HTMLI
     
     - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
-      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
+      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER $BUILD_HTMLI
   
   test-scan-and-verify:
       
