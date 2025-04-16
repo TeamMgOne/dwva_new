@@ -39,12 +39,6 @@ jobs:
           sudo mv jfrog /usr/local/bin/jfrog
 
       - name: Publish build info to JFrog
-        env:
-          JFROG_CLI_ARTIFACTORY_URL: ${{ secrets.JFROG_URL }}
-          JFROG_CLI_USER: ${{ secrets.JFROG_USERNAME }}
-          JFROG_CLI_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
-          JFROG_CLI_OFFER_CONFIG: false
-          JFROG_CLI_SERVER_ID: jfrog-server
         run: |
           export BUILD_NAME=dvwa-ci
           export BUILD_NUMBER=${{ github.sha }}
@@ -52,10 +46,19 @@ jobs:
           jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER docker-dev \
             --build-name=$BUILD_NAME \
             --build-number=$BUILD_NUMBER \
-            --server-id=jfrog-server
+            --url=${{ secrets.JFROG_URL }} \
+            --user=${{ secrets.JFROG_USERNAME }} \
+            --password=${{ secrets.JFROG_PASSWORD }}
       
-          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
-          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
+          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER \
+            --url=${{ secrets.JFROG_URL }} \
+            --user=${{ secrets.JFROG_USERNAME }} \
+            --password=${{ secrets.JFROG_PASSWORD }}
+      
+          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER \
+            --url=${{ secrets.JFROG_URL }} \
+            --user=${{ secrets.JFROG_USERNAME }} \
+            --password=${{ secrets.JFROG_PASSWORD }}
 
   test-scan-and-verify:
     needs: build-and-push-dev
