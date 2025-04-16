@@ -44,10 +44,10 @@ jobs:
           export BUILD_NUMBER=${{ github.sha }}
       
           # Pull the image from the registry so docker-push can work
-          docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER
+          docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
       
           # Push to Artifactory (with build metadata)
-          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER docker-dev \
+          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }} docker-dev \
             --build-name=$BUILD_NAME \
             --build-number=$BUILD_NUMBER \
             --url=${{ secrets.JFROG_URL }} \
