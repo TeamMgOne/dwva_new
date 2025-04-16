@@ -64,10 +64,9 @@ jobs:
     - name: Add Git metadata for evidence
       run: jf rt build-add-git .
 
-    - name: (Optional) Generate and attach SBOM
+    - name: integrating Jfrog evidence
       run: |
-        jf sbom generate --type=cyclonedx --output=sbom.json
-        jf rt build-add-sbom sbom.json --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER
+        jf evd --help
   
   test-scan-and-verify:
       
