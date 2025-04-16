@@ -27,10 +27,10 @@ jobs:
       - name: Tag image for JFrog
         run: |
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ steps.set_tag.outputs.tag }}
+          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}
 
       - name: Push image to JFrog Dev
-        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ steps.set_tag.outputs.tag }}
+        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ steps.set_tag.outputs.tag }}
 
       - name: Install JFrog CLI v1
         run: |
@@ -45,10 +45,10 @@ jobs:
           export TAG=${{ needs.build-and-push-dev.outputs.tag }}
       
           # Rebuild image
-          docker build -t ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG .
+          docker build -t ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG .
       
           # Push to Artifactory
-          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG docker-dev \
+          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
             --build-name=$BUILD_NAME \
             --build-number=$BUILD_NUMBER \
             --url=${{ secrets.JFROG_URL }} \
@@ -80,10 +80,10 @@ jobs:
         run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
       - name: Pull dev image
-        run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+        run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
 
       - name: Run DVWA container
-        run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+        run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
 
       - name: Check DVWA is reachable
         run: |
