@@ -44,17 +44,18 @@ jobs:
           JFROG_CLI_USER: ${{ secrets.JFROG_USERNAME }}
           JFROG_CLI_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
           JFROG_CLI_OFFER_CONFIG: false
+          JFROG_CLI_SERVER_ID: jfrog-server
         run: |
           export BUILD_NAME=dvwa-ci
           export BUILD_NUMBER=${{ github.sha }}
-          
+      
           jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER docker-dev \
             --build-name=$BUILD_NAME \
-            --build-number=$BUILD_NUMBER
+            --build-number=$BUILD_NUMBER \
+            --server-id=jfrog-server
       
-          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER
-          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER
-
+          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
+          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
 
   test-scan-and-verify:
     needs: build-and-push-dev
