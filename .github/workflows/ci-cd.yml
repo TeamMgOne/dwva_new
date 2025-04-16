@@ -27,7 +27,7 @@ jobs:
       - name: Tag image for JFrog
         run: |
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ steps.set_tag.outputs.tag }}
 
       - name: Push image to JFrog Dev
         run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ steps.set_tag.outputs.tag }}
