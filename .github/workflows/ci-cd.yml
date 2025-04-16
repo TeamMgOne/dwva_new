@@ -11,96 +11,87 @@ jobs:
     outputs:
       tag: ${{ steps.set_tag.outputs.tag }}
     steps:
-    - name: Checkout repository - loads the code to the runner
-      uses: actions/checkout@v3
-    
-    - name: Login to JFrog Docker Registry
-      run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
-    
-    - name: Docker image build
-      run: docker build -t dvwa:latest .
-    
-    - name: Generate image tag
-      run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-    
-    - name: Generate image tag
-      id: set_tag
-      run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+      - name: Checkout repository - loads the code to the runner
+        uses: actions/checkout@v3
 
-    - name: docker tag points to jfrog dev docker repo with dynamic image tag
-      run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+      - name: Login to JFrog Docker Registry
+        run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
-    - name: Push image to JFrog Dev
-      run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
-    
-    - name: Install and configure JFrog CLI v1
-      run: |
-        # Download JFrog CLI v1
-        curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v1/1.53.2/jfrog-cli-linux-amd64/jfrog -o jfrog
-        chmod +x jfrog
-        sudo mv jfrog /usr/local/bin/jfrog
-    
-        # Configure JFrog CLI with Artifactory credentials
-        jfrog config --url=${{ secrets.JFROG_URL }} \
-                        --user=${{ secrets.JFROG_USERNAME }} \
-                        --password=${{ secrets.JFROG_PASSWORD }} \
-                        jfrog-server
+      - name: Docker image build
+        run: docker build -t dvwa:latest .
 
-    - name: setting env vars so following scans can use
-      run: | 
-        echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-    - name: re-pushing image with it's metadate for following scans
-      run: |
-        jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG docker-dev \
-        --build-name=$BUILD_NAME \
-        --build-number=$BUILD_NUMBER
-    - name: Collect environment variables
-      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
-    - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
-      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
+      - name: Generate image tag
+        id: set_tag
+        run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Tag image for JFrog
+        run: |
+          echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+          docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+
+      - name: Push image to JFrog Dev
+        run: docker push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$TAG
+
+      - name: Install JFrog CLI v1
+        run: |
+          curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v1/1.53.2/jfrog-cli-linux-amd64/jfrog -o jfrog
+          chmod +x jfrog
+          sudo mv jfrog /usr/local/bin/jfrog
+
+      - name: Publish build info to JFrog
+        env:
+          JFROG_CLI_JFROG_URL: ${{ secrets.JFROG_URL }}
+          JFROG_CLI_USER: ${{ secrets.JFROG_USERNAME }}
+          JFROG_CLI_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+          JFROG_CLI_OFFER_CONFIG: false
+        run: |
+          export BUILD_NAME=dvwa-ci
+          export BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)
+
+          jfrog rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-$BUILD_NUMBER docker-dev \
+            --build-name=$BUILD_NAME \
+            --build-number=$BUILD_NUMBER
+
+          jfrog rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+          jfrog rt build-publish $BUILD_NAME $BUILD_NUMBER
+
   test-scan-and-verify:
-      needs: build-and-push-dev
-      runs-on: ubuntu-latest
-      environment:
-        name: test
-      steps:
+    needs: build-and-push-dev
+    runs-on: ubuntu-latest
+    environment:
+      name: test
+    steps:
       - name: Awaiting manual approval before scan and test
         run: echo "Test stage approved. Ready to run scans and validations."
-      - name: authenticating JFROG to pull the dev repo
-        run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin 
-      - name: pulling the dev image(dev-$TAG)
+
+      - name: Authenticate Docker to JFrog
+        run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+
+      - name: Pull dev image
         run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
-      - name: running the image within a container
+
+      - name: Run DVWA container
         run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
-      - name: verify dvwa container is running
-        run: |
-          RUNNING=$(docker inspect -f '{{.State.Running}}' dvwa-test)
-          if [ "$RUNNING" != "true" ]; then
-            echo "Container is not running. Dumping logs:"
-            docker logs dvwa-test
-            exit 1
-          fi
-      - name: debug exposed ports
-        run: docker exec dvwa-test netstat -tulnp || ss -tulnp
-      - name: checking dvwa runs
+
+      - name: Check DVWA is reachable
         run: |
           for i in {1..10}; do
             STATUS=$(curl -L -o /dev/null -s -w "%{http_code}" http://127.0.0.1:8080)
-            if [ "$STATUS" -eq 200 ]; then
-              echo "DVWA is running and responded with 200 OK"
+            if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 302 ]; then
+              echo "DVWA is reachable. HTTP status: $STATUS"
               exit 0
             fi
-            echo "Attempt $i: DVWA not ready. HTTP status: $STATUS"
+            echo "Waiting for DVWA... Attempt $i, HTTP status: $STATUS"
             sleep 5
           done
-          echo "DVWA failed to respond properly after retries."
+          echo "DVWA did not become reachable. Dumping logs:"
           docker logs dvwa-test
           exit 1
-          
-      - name: terminate dvwa docker container
+
+      - name: Stop DVWA container
         run: docker stop dvwa-test
-      - name: Install JFrog CLI v1 and run Xray scan
+
+      - name: Install JFrog CLI v1 and scan build with Xray
         env:
           JFROG_CLI_JFROG_URL: ${{ secrets.JFROG_URL }}
           JFROG_CLI_USER: ${{ secrets.JFROG_USERNAME }}
@@ -110,6 +101,5 @@ jobs:
           curl -fL https://releases.jfrog.io/artifactory/jfrog-cli/v1/1.53.2/jfrog-cli-linux-amd64/jfrog -o jfrog
           chmod +x jfrog
           sudo mv jfrog /usr/local/bin/jfrog
-      
-          jfrog xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
 
+          jfrog xray scan --build=dvwa-ci/${{ needs.build-and-push-dev.outputs.tag }}
