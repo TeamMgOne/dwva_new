@@ -64,9 +64,30 @@ jobs:
     - name: Add Git metadata for evidence
       run: jf rt build-add-git .
 
-    - name: integrating Jfrog evidence
+    - name: Generate RSA key pair
       run: |
-        jf evd --help
+        openssl genrsa -out private.pem 2048
+        openssl rsa -in private.pem -pubout -out public.pem
+
+    - name: Upload public key to JFrog
+      run: |
+        curl -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_API_TOKEN }}" \
+          -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
+          -H "Content-Type: application/json" \
+          -d '{"public_key": "'"$(cat public.pem | sed 's/$/\\n/' | tr -d '\n')"'" }'
+
+    - name: Create dummy SBOM file (placeholder)
+      run: |
+        echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
+
+    - name: Create and upload signed evidence
+      run: |
+        ./jf evd create-evidence \
+          --repo-path evidence-repo/dvwa/sbom.intoto.jsonl \
+          --predicate sbom.json \
+          --predicate-type cyclonedx \
+          --key private.pem \
+          --key-name my-rsa-key
   
   test-scan-and-verify:
       
