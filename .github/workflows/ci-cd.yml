@@ -82,7 +82,7 @@ jobs:
 
     - name: Create and upload signed evidence
       run: |
-        ./jf evd create-evidence \
+        .jf evd create-evidence \
           --repo-path evidence-repo/dvwa/sbom.intoto.jsonl \
           --predicate sbom.json \
           --predicate-type cyclonedx \
@@ -110,7 +110,7 @@ jobs:
 
     - name: Create signed SBOM evidence
       run: |
-        ./jf evd create-evidence \
+        .jf evd create-evidence \
           --name sbom-evidence \
           --type sbom \
           --predicate sbom.json \
