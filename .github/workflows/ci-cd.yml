@@ -88,7 +88,40 @@ jobs:
           --predicate-type cyclonedx \
           --key private.pem \
           --key-name my-rsa-key
-  
+
+    - name: Add Git metadata to build
+      run: jf rt build-add-git .
+
+    - name: Create dummy SBOM file
+      run: |
+        echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
+
+    - name: Generate RSA key pair
+      run: |
+        openssl genrsa -out private.pem 2048
+        openssl rsa -in private.pem -pubout -out public.pem
+
+    - name: Upload public key to JFrog (optional if already uploaded)
+      run: |
+        curl -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_API_TOKEN }}" \
+          -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
+          -H "Content-Type: application/json" \
+          -d '{"public_key": "'"$(cat public.pem | sed 's/$/\\n/' | tr -d '\n')"'" }'
+
+    - name: Create signed SBOM evidence
+      run: |
+        ./jf evd create-evidence \
+          --name sbom-evidence \
+          --type sbom \
+          --predicate sbom.json \
+          --predicate-type cyclonedx \
+          --key private.pem \
+          --key-name my-rsa-key
+
+    - name: Attach evidence to build
+      run: |
+        jf evd attach --build-name $BUILD_NAME --build-number $BUILD_NUMBER
+
   test-scan-and-verify:
       
       needs: build-and-push-dev
