@@ -43,6 +43,8 @@ jobs:
           --url=${{ secrets.JFROG_URL }} \
           --access-token=${{ secrets.JFROG_API_TOKEN }} \
           --interactive=false
+    - name: Debug CLI config
+      run: jf config show jfrog-server
 
     - name: Set build environment variables
       run: |
