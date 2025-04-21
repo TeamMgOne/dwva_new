@@ -39,8 +39,6 @@ jobs:
     - name: Install JFrog CLI
       run: |
         curl -fL https://install-cli.jfrog.io | sh
-        ls /usr/local/bin/ | grep *jf*
-        sudo mv jf /usr/local/bin/jf
 
     - name: Set JFrog CLI auth
       run: |
