@@ -81,7 +81,7 @@ jobs:
         echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
 
     - name: Create and attach signed evidence to the build
-      run: jf evd create-evidence --predicate sbom.json --predicate-type cyclonedx --key private.pem --key-name my-rsa-key --build-name $BUILD_NAME --build-number $BUILD_NUMBER
+      run: jf evd create-evidence --predicate sbom.json --predicate-type cyclonedx --key private.pem --key-name 'my-rsa-key' --build-name $BUILD_NAME --build-number $BUILD_NUMBER
 
     - name: Add Git metadata to build
       run: jf rt build-add-git .
