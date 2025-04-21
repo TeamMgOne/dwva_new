@@ -55,9 +55,9 @@ jobs:
 
     - name: Push Docker image metadata (with build info)
       run: |
-        jf rt docker-push --url ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
-          --build-name=$BUILD_NAME \
-          --build-number=$BUILD_NUMBER \
+        jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
+        --build-name=$BUILD_NAME \
+        --build-number=$BUILD_NUMBER
 
     - name: Collect environment variables for build
       run: |
