@@ -1,132 +1,122 @@
+
 name: DVWA CI/CD
 
 on:
   push:
     branches:
       - master
-    
+
 jobs:
   build-and-push-dev:
+    
     runs-on: ubuntu-latest
+    
     outputs:
       tag: ${{ steps.set_tag.outputs.tag }}
-
+    
     steps:
-    - name: Checkout repository
+    - name: Checkout repository - loads the code to the runner
       uses: actions/checkout@v3
-
+    
     - name: Login to JFrog Docker Registry
-      run: echo "${{ secrets.JFROG_PASSWORD }}" \
-           | docker login ${{ secrets.DOCKER_REPO_DEV }} \
-             --username ${{ secrets.JFROG_USERNAME }} \
-             --password-stdin
-
-    - name: Build Docker image
+      run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+    
+    - name: Docker image build
       run: docker build -t dvwa:latest .
-
-    - name: Generate image tag (env)
+    
+    - name: Generate image tag
       run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-
-    - name: Generate image tag (output)
+    
+    - name: Generate image tag
       id: set_tag
       run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
-    - name: Tag & push to dev repo
-      run: |
-        docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
-        docker push    ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
+    - name: docker tag points to jfrog dev docker repo with dynamic image tag
+      run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
 
-    - name: Install and configure JFrog CLI (token auth)
+    - name: Push image to JFrog Dev
+      run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
+    
+    - name: Install and configure JFrog CLI
       run: |
         curl -fL https://install-cli.jfrog.io | sh
         jf config add jfrog-server \
           --url=${{ secrets.JFROG_URL }} \
-          --access-token=${{ secrets.JFROG_API_TOKEN }}
-
-    - name: Set build name & number
-      run: |
+          --user=${{ secrets.JFROG_USERNAME }} \
+          --password=${{ secrets.JFROG_PASSWORD }}
+    
+    - name: setting env vars so following scans can use
+      run: | 
         echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=$TAG"     >> $GITHUB_ENV
-
-    - name: Push image with build metadata
-      run: jf rt docker-push \
-            ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG \
-            docker-dev \
-            --build-name=$BUILD_NAME \
-            --build-number=$BUILD_NUMBER
-
+        echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
+    
+    - name: re-pushing image with it's metadate for following scans
+      run: |
+        jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
+        --build-name=$BUILD_NAME \
+        --build-number=$BUILD_NUMBER
+    
     - name: Collect environment variables
-      run: jf rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+    
+    - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
+      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
 
-    - name: Publish the build metadata
-      run: jf rt build-publish     $BUILD_NAME $BUILD_NUMBER
+    - name: Add Git metadata for evidence
+      run: jf rt build-add-git .
 
-    - name: Add Git metadata to build
-      run: jf rt build-add-git     .
-
-    - name: Generate RSA key pair
+    - name: integrating Jfrog evidence
       run: |
-        openssl genrsa -out private.pem 2048
-        openssl rsa -in private.pem -pubout -out public.pem
-
-    - name: Upload public key to JFrog
-      run: |
-        curl -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_API_TOKEN }}" \
-             -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
-             -H "Content-Type: application/json" \
-             -d '{"public_key": "'"$(sed 's/$/\\n/' public.pem | tr -d '\n')"'" }'
-
-    - name: Create dummy SBOM file
-      run: echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
-
-    - name: Sign and attach build evidence
-      run: jf evd create \
-             --build-name "${BUILD_NAME}" \
-             --build-number "${BUILD_NUMBER}" \
-             --predicate=sbom.json \
-             --predicate-type=https://jfrog.com/evidence/build-signature/v1 \
-             --key=private.pem
-
+        jf evd --help
+  
   test-scan-and-verify:
-    needs: build-and-push-dev
-    runs-on: ubuntu-latest
-    environment: test
-
-    steps:
-    - name: Await manual approval
-      run: echo "Test stage approved. Ready to scan."
-
-    - name: Login to JFrog Docker Registry
-      run: echo "${{ secrets.JFROG_PASSWORD }}" \
-           | docker login ${{ secrets.DOCKER_REPO_DEV }} \
-             --username ${{ secrets.JFROG_USERNAME }} \
-             --password-stdin
-
-    - name: Pull dev image
-      run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
-
-    - name: Run DVWA in container
-      run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
-
-    - name: Verify container running
-      run: |
-        RUNNING=$(docker inspect -f '{{.State.Running}}' dvwa-test)
-        if [ "$RUNNING" != "true" ]; then
-          echo "Container failed. Logs:"; docker logs dvwa-test
+      
+      needs: build-and-push-dev
+      
+      runs-on: ubuntu-latest
+      
+      environment:
+        name: test
+      
+      steps:
+      - name: Awaiting manual approval before scan and test
+        run: echo "Test stage approved. Ready to run scans and validations."
+      
+      - name: authenticating JFROG to pull the dev repo
+        run: echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin 
+      
+      - name: pulling the dev image(dev-$TAG)
+        run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+      
+      - name: running the image within a container
+        run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+      
+      - name: verify dvwa container is running
+        run: |
+          RUNNING=$(docker inspect -f '{{.State.Running}}' dvwa-test)
+          if [ "$RUNNING" != "true" ]; then
+            echo "Container is not running. Dumping logs:"
+            docker logs dvwa-test
+            exit 1
+          fi
+      
+      - name: debug exposed ports
+        run: docker exec dvwa-test netstat -tulnp || ss -tulnp
+      
+      - name: checking dvwa runs
+        run: |
+          for i in {1..10}; do
+            STATUS=$(curl -L -o /dev/null -s -w "%{http_code}" http://127.0.0.1:8080)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "DVWA is running and responded with 200 OK"
+              exit 0
+            fi
+            echo "Attempt $i: DVWA not ready. HTTP status: $STATUS"
+            sleep 5
+          done
+          echo "DVWA failed to respond properly after retries."
+          docker logs dvwa-test
           exit 1
-        fi
-
-    - name: Debug exposed ports
-      run: docker exec dvwa-test netstat -tulnp || ss -tulnp
-
-    - name: Health-check DVWA
-      run: |
-        for i in {1..10}; do
-          STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080)
-          if [ "$STATUS" -eq 200 ]; then exit 0; fi
-          echo "Attempt $i: HTTP $STATUS"; sleep 5
-        done
-        echo "DVWA never became ready."; docker logs dvwa-test; exit 1
-
-    - name: Stop DVWA container
-      run: docker stop dvwa-test
+          
+      - name: terminate dvwa docker container
+        run: docker stop dvwa-test
