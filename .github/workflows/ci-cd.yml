@@ -35,19 +35,16 @@ jobs:
       run: |
         docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
         docker push    ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
-
     - name: Install and configure JFrog CLI (token auth)
       run: |
         curl -fL https://install-cli.jfrog.io | sh
         jf config add jfrog-server \
           --url=${{ secrets.JFROG_URL }} \
           --access-token=${{ secrets.JFROG_API_TOKEN }}
-
     - name: Set build name & number
       run: |
         echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
         echo "BUILD_NUMBER=$TAG"     >> $GITHUB_ENV
-
     - name: Push image with build metadata
       run: jf rt docker-push \
             ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG \
@@ -68,16 +65,22 @@ jobs:
       run: |
         openssl genrsa -out private.pem 2048
         openssl rsa -in private.pem -pubout -out public.pem
-
     - name: Upload public key to JFrog
       run: |
         curl -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_API_TOKEN }}" \
              -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
              -H "Content-Type: application/json" \
              -d '{"public_key": "'"$(sed 's/$/\\n/' public.pem | tr -d '\n')"'" }'
-
     - name: Create dummy SBOM file
       run: echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
+ Check failure on line 80 in .github/workflows/ci-cd.yml
+
+
+GitHub Actions
+/ .github/workflows/ci-cd.yml
+Invalid workflow file
+
+You have an error in your yaml syntax on line 80
 
     - name: Sign and attach build evidence
       run: jf evd create \
@@ -115,7 +118,6 @@ jobs:
           echo "Container failed. Logs:"; docker logs dvwa-test
           exit 1
         fi
-
     - name: Debug exposed ports
       run: docker exec dvwa-test netstat -tulnp || ss -tulnp
 
@@ -127,6 +129,5 @@ jobs:
           echo "Attempt $i: HTTP $STATUS"; sleep 5
         done
         echo "DVWA never became ready."; docker logs dvwa-test; exit 1
-
     - name: Stop DVWA container
       run: docker stop dvwa-test
