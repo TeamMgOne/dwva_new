@@ -55,9 +55,12 @@ jobs:
 
     - name: Push Docker image metadata (with build info)
       run: |
-        jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
-        --build-name=$BUILD_NAME \
-        --build-number=$BUILD_NUMBER
+        export JFROG_CLI_JFROG_URL="${{ secrets.JFROG_URL }}"
+        export JFROG_CLI_JFROG_ACCESS_TOKEN="${{ secrets.JFROG_API_TOKEN }}"
+        jf rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
+          --build-name=$BUILD_NAME \
+          --build-number=$BUILD_NUMBER
+    
 
     - name: Collect environment variables for build
       run: |
