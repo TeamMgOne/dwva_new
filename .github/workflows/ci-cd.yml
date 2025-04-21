@@ -35,6 +35,11 @@ jobs:
 
     - name: Push image to JFrog Dev
       run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
+    
+    - name: Install JFrog CLI
+      run: |
+        curl -fL https://install-cli.jfrog.io | sh
+        sudo mv jf /usr/local/bin/jf
 
     - name: Set JFrog CLI auth
       run: |
