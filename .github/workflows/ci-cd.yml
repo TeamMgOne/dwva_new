@@ -53,17 +53,24 @@ jobs:
       run: |
         jf  rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
         --build-name=$BUILD_NAME \
-        --build-number=$BUILD_NUMBER
+        --build-number=$BUILD_NUMBER \
+        --server-id=jfrog-server
     
     - name: Collect environment variables
-      run: jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER
+      run: |
+        jf  rt build-collect-env $BUILD_NAME $BUILD_NUMBER \
+        --server-id=jfrog-server
     
     - name: Publish the build metadata so XRAY will be able to find it as it requires JFROG build
-      run: jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
-
+      run: |
+        jf  rt build-publish $BUILD_NAME $BUILD_NUMBER
+        --server-id=jfrog-server
+    
     - name: Add Git metadata for evidence
-      run: jf rt build-add-git .
-
+      run: |
+        jf rt build-add-git .
+        --server-id=jfrog-server
+    
     - name: integrating Jfrog evidence
       run: |
         jf evd --help
@@ -85,7 +92,7 @@ jobs:
         echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
 
     - name: Sign & attach build evidence
-      run: jf evd create --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER --predicate=sbom.json --predicate-type=https://jfrog.com/evidence/build-signature/v1 --key=private.pem
+      run: jf evd create --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER --predicate=sbom.json --predicate-type=https://jfrog.com/evidence/build-signature/v1 --key=private.pem --server-id=jfrog-server
  
   test-scan-and-verify:
       
