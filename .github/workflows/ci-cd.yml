@@ -85,13 +85,8 @@ jobs:
         echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
 
     - name: Sign & attach build evidence
-      run: jf evd create \
-             --build-name="${BUILD_NAME}" \
-             --build-number="${BUILD_NUMBER}" \
-             --predicate=sbom.json \
-             --predicate-type=https://jfrog.com/evidence/build-signature/v1 \
-             --key=private.pem
-             
+      run: jf evd create --build-name=$BUILD_NAME --build-number=$BUILD_NUMBER --predicate=sbom.json --predicate-type=https://jfrog.com/evidence/build-signature/v1 --key=private.pem
+ 
   test-scan-and-verify:
       
       needs: build-and-push-dev
