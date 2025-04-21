@@ -67,7 +67,31 @@ jobs:
     - name: integrating Jfrog evidence
       run: |
         jf evd --help
-  
+
+    - name: Generate RSA key pair
+      run: |
+        openssl genrsa -out private.pem 2048
+        openssl rsa -in private.pem -pubout -out public.pem
+
+    - name: Upload public key to JFrog
+      run: |
+        curl -u "${{ secrets.JFROG_API_TOKEN }}" \
+             -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
+             -H "Content-Type: application/json" \
+             -d '{"public_key": "'"$(sed 's/$/\\n/' public.pem | tr -d '\n')"'" }'
+
+    - name: Create dummy SBOM file
+      run: |
+        echo '{ "sbom": "placeholder-for-demo" }' > sbom.json
+
+    - name: Sign & attach build evidence
+      run: jf evd create \
+             --build-name="${BUILD_NAME}" \
+             --build-number="${BUILD_NUMBER}" \
+             --predicate=sbom.json \
+             --predicate-type=https://jfrog.com/evidence/build-signature/v1 \
+             --key=private.pem
+             
   test-scan-and-verify:
       
       needs: build-and-push-dev
