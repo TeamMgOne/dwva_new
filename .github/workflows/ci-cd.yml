@@ -36,13 +36,11 @@ jobs:
     - name: Push image to JFrog Dev
       run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
 
-    - name: Install and configure JFrog CLI (using API token)
+    - name: Set JFrog CLI auth
       run: |
-        curl -fL https://install-cli.jfrog.io | sh
-        jf config add jfrog-server \
-          --url=${{ secrets.JFROG_URL }} \
-          --access-token=${{ secrets.JFROG_API_TOKEN }} \
-          --interactive=false
+        echo "JFROG_CLI_JFROG_URL=${{ secrets.JFROG_URL }}" >> $GITHUB_ENV
+        echo "JFROG_CLI_JFROG_ACCESS_TOKEN=${{ secrets.JFROG_API_TOKEN }}" >> $GITHUB_ENV
+
     - name: Debug CLI config
       run: jf config show jfrog-server
 
@@ -57,19 +55,18 @@ jobs:
           ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
           --build-name=$BUILD_NAME \
           --build-number=$BUILD_NUMBER \
-          --server-id=jfrog-server
 
     - name: Collect environment variables for build
       run: |
-        jf rt build-collect-env $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
+        jf rt build-collect-env $BUILD_NAME $BUILD_NUMBER 
 
     - name: Publish the build info to JFrog Artifactory
       run: |
-        jf rt build-publish $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
+        jf rt build-publish $BUILD_NAME $BUILD_NUMBER 
 
     - name: Add Git metadata to the build
       run: |
-        jf rt build-add-git $BUILD_NAME $BUILD_NUMBER --server-id=jfrog-server
+        jf rt build-add-git $BUILD_NAME $BUILD_NUMBER 
 
     # --- Evidence Integration Steps (according to official JFrog example) ---
 
@@ -97,7 +94,6 @@ jobs:
           --predicate=./sbom.json \
           --predicate-type=https://jfrog.com/evidence/build-signature/v1 \
           --key=private.pem \
-          --server-id=jfrog-server
         echo '✅ Evidence successfully attached to build' >> $GITHUB_STEP_SUMMARY
 
   # --- Second Job remains unchanged (no edits needed) ---
