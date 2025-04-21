@@ -41,8 +41,8 @@ jobs:
         curl -fL https://install-cli.jfrog.io | sh
         jf config add jfrog-server \
           --url=${{ secrets.JFROG_URL }} \
-          --user=${{ secrets.JFROG_USERNAME }} \
-          --password=${{ secrets.JFROG_PASSWORD }}
+          --access-token=${{ secrets.JFROG_API_TOKEN }}
+
     
     - name: setting env vars so following scans can use
       run: | 
