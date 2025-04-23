@@ -56,6 +56,7 @@ jobs:
     - name: Push Docker image metadata (with build info)
       run: |
         jf rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
+          --url=$JFROG_CLI_JFROG_URL \
           --build-name=$BUILD_NAME \
           --build-number=$BUILD_NUMBER
     
