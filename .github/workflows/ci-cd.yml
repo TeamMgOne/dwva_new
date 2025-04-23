@@ -49,6 +49,20 @@ jobs:
     #    *Automatically sets* JFROG_CLI_BUILD_NAME = workflow name
     #                              JFROG_CLI_BUILD_NUMBER = run number
     # ----------------------------------------------------------------------
+    - name: Debug OIDC discovery endpoint
+      run: |
+        set -e
+        URL="${{ vars.JF_URL }}/access/.well-known/openid-configuration"
+        echo "Probing $URL"
+        STATUS=$(curl -o /dev/null -w '%{http_code}' "$URL")
+        echo "HTTP status: $STATUS"
+        if [ "$STATUS" != "200" ]; then
+          echo "Endpoint unreachable or misconfigured"
+          exit 1
+        fi
+        curl -sSL "$URL" | head -20   # show first lines of JSON
+  
+      
     - uses: jfrog/setup-jfrog-cli@v4
       env:
           JF_URL: https://accenture2025.jfrog.io 
