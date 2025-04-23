@@ -29,9 +29,7 @@ jobs:
         which docker || echo "Docker missing"
 
     - name: Docker login to Artifactory
-      run: echo '${{ secrets.JFROG_PASSWORD }}' | \
-           docker login ${{ secrets.DOCKER_REPO_DEV }} \
-             --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+      run: echo '${{ secrets.JFROG_PASSWORD }}' |docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
     # ----------------------------------------------------------------------
     # 3. Build the image
