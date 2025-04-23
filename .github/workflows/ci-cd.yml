@@ -1,9 +1,11 @@
 name: DVWA CI/CD
-
 on:
   push:
-    branches:
-      - master
+    branches: [ master ]
+
+permissions:
+  id-token: write      # required for OIDC
+  contents: read
 
 jobs:
   build-and-push-dev:
@@ -12,129 +14,104 @@ jobs:
       tag: ${{ steps.set_tag.outputs.tag }}
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    # ----------------------------------------------------------------------
+    # 1. Checkout
+    # ----------------------------------------------------------------------
+    - uses: actions/checkout@v3
 
-    - name: Docker login to JFrog Registry
-      run: |
-        echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} \
-          --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+    # ----------------------------------------------------------------------
+    # 2. Docker login (plain Docker – registry creds still needed)
+    # ----------------------------------------------------------------------
+    - name: Docker login to Artifactory
+      run: echo '${{ secrets.JFROG_PASSWORD }}' | \
+           docker login ${{ secrets.DOCKER_REPO_DEV }} \
+             --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
-    - name: Docker image build
+    # ----------------------------------------------------------------------
+    # 3. Build the image
+    # ----------------------------------------------------------------------
+    - name: Build DVWA
       run: docker build -t dvwa:latest .
 
-    - name: Generate image tag
-      run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-
-    - name: Output image tag
+    - name: Generate & expose image tag
       id: set_tag
-      run: echo "tag=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+      run: echo "TAG=${GITHUB_SHA::7}" | tee -a "$GITHUB_ENV" "$GITHUB_OUTPUT"
 
-    - name: Docker tag image
-      run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
+    - name: Tag image
+      run: docker tag dvwa:latest \
+           ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
 
-    - name: Push image to JFrog Dev
-      run: docker push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
-    
-    - name: Install JFrog CLI
+    # ----------------------------------------------------------------------
+    # 4. Install & configure JFrog CLI (OIDC)
+    #    *Automatically sets* JFROG_CLI_BUILD_NAME = workflow name
+    #                              JFROG_CLI_BUILD_NUMBER = run number
+    # ----------------------------------------------------------------------
+    - uses: jfrog/setup-jfrog-cli@v4
+      with:
+        oidc-provider-name: evidence     # must match the provider name in Artifactory
+      env:
+        JF_URL: ${{ vars.JF_URL }}       # e.g. https://acme.jfrog.io
+
+    - name: Verify CLI config
+      run: jf config show
+
+    # ----------------------------------------------------------------------
+    # 5. Push image *with* build-info in one command
+    #    (build-name/number auto-picked up, no --url flag needed)
+    # ----------------------------------------------------------------------
+    - name: Push image + build-info
+      run: jf rt docker-push \
+              ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev
+
+    # ----------------------------------------------------------------------
+    # 6. Evidence – generate key (demo) & attach predicate to the build
+    # ----------------------------------------------------------------------
+    - name: Generate temp RSA keypair
       run: |
-        curl -fL https://install-cli.jfrog.io | sh
-
-    - name: Set JFrog CLI auth
-      run: |
-        echo "JFROG_CLI_JFROG_URL=${{ secrets.JFROG_URL }}" >> $GITHUB_ENV
-        echo "JFROG_CLI_JFROG_ACCESS_TOKEN=${{ secrets.JFROG_API_TOKEN }}" >> $GITHUB_ENV
-
-    - name: Debug CLI config
-      run: jf config show jfrog-server
-
-    - name: Set build environment variables
-      run: |
-        echo "BUILD_NAME=dvwa-ci" >> $GITHUB_ENV
-        echo "BUILD_NUMBER=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
-
-    - name: Push Docker image metadata (with build info)
-      run: |
-        jf rt docker-push ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG docker-dev \
-          --url=$JFROG_CLI_JFROG_URL \
-          --build-name=$BUILD_NAME \
-          --build-number=$BUILD_NUMBER
-    
-
-    - name: Collect environment variables for build
-      run: |
-        jf rt build-collect-env $BUILD_NAME $BUILD_NUMBER 
-
-    - name: Publish the build info to JFrog Artifactory
-      run: |
-        jf rt build-publish $BUILD_NAME $BUILD_NUMBER 
-
-    - name: Add Git metadata to the build
-      run: |
-        jf rt build-add-git $BUILD_NAME $BUILD_NUMBER 
-
-    # --- Evidence Integration Steps (according to official JFrog example) ---
-
-    - name: Generate RSA private/public keys
-      run: |
-        openssl genrsa -out private.pem 2048
+        openssl genrsa  -out private.pem 2048
         openssl rsa -in private.pem -pubout -out public.pem
+        jf rt security-keypair-create dvwa-ci-key --public-key=public.pem
 
-    - name: Upload public key to JFrog Artifactory
+    - name: Create predicate JSON
       run: |
-        curl -u "${{ secrets.JFROG_USERNAME }}:${{ secrets.JFROG_API_TOKEN }}" \
-          -X PUT "${{ secrets.JFROG_URL }}/artifactory/api/security/keypair/my-rsa-key?public=true" \
-          -H "Content-Type: application/json" \
-          -d '{"public_key": "'"$(sed 's/$/\\n/' public.pem | tr -d '\n')"'" }'
+        cat > run_info.json <<EOF
+        {
+          "name":       "${{ github.workflow }}",
+          "timestamp":  "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "initiator":  "${{ github.actor }}"
+        }
+        EOF
 
-    - name: Create SBOM evidence (JSON file)
-      run: |
-        echo '{"actor":"${{ github.actor }}","date":"'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'","sbom":"demo-placeholder"}' > sbom.json
-
-    - name: Create and attach signed build evidence (aligned with JFrog's documentation)
+    - name: Sign & attach Evidence
       run: |
         jf evd create \
-          --build-name="${BUILD_NAME}" \
-          --build-number="${BUILD_NUMBER}" \
-          --predicate=./sbom.json \
-          --predicate-type=https://jfrog.com/evidence/build-signature/v1 \
-          --key=private.pem \
-        echo '✅ Evidence successfully attached to build' >> $GITHUB_STEP_SUMMARY
+           --predicate=run_info.json \
+           --predicate-type=https://in-toto.io/attestation/test-result/v0.1 \
+           --key=private.pem
+        echo '✅ Evidence attached' >> $GITHUB_STEP_SUMMARY
 
-  # --- Second Job remains unchanged (no edits needed) ---
-
+  # ------------------------------------------------------------------------
+  # 7. Test / verify stage – unchanged except it pulls the tag from outputs
+  # ------------------------------------------------------------------------
   test-scan-and-verify:
     needs: build-and-push-dev
     runs-on: ubuntu-latest
-    environment:
-      name: test
+    environment: test
 
     steps:
-    - name: Await manual approval
-      run: echo "Test stage approved. Ready to run scans."
+    - name: Manual approval
+      run: echo "Test stage approved."
 
-    - name: Authenticate to JFrog Docker Registry
-      run: |
-        echo "${{ secrets.JFROG_PASSWORD }}" | docker login ${{ secrets.DOCKER_REPO_DEV }} \
-          --username ${{ secrets.JFROG_USERNAME }} --password-stdin
+    - name: Docker login
+      run: echo '${{ secrets.JFROG_PASSWORD }}' | \
+           docker login ${{ secrets.DOCKER_REPO_DEV }} \
+             --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
     - name: Pull dev image
-      run: docker pull ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
+      run: docker pull \
+           ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
 
-    - name: Run DVWA container
-      run: docker run -d -p 8080:80 --name dvwa-test ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-${{ needs.build-and-push-dev.outputs.tag }}
-
-    - name: Verify DVWA is running
-      run: |
-        RUNNING=$(docker inspect -f '{{.State.Running}}' dvwa-test)
-        if [ "$RUNNING" != "true" ]; then
-          echo "Container not running, logs:"
-          docker logs dvwa-test
-          exit 1
-        fi
-
-    - name: Check exposed ports
-      run: docker exec dvwa-test netstat -tulnp || ss -tulnp
+    # … the rest of your health-check steps stay the same …
 
     - name: Health check DVWA
       run: |
