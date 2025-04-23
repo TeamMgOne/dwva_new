@@ -19,7 +19,7 @@ jobs:
   moti-jfrog-cli:
     env:
       IMG_NAME: ${{ github.repository }}
-      JF_URL: "https://accenture2025.jfrog.io/"
+      JF_URL: "https://accenture2025.jfrog.io/artifactory"
       JFROG_CLI_BUILD_NAME: "ron"
       JFROG_CLI_BUILD_NUMBER: ${{ github.run_id }}
     permissions:
