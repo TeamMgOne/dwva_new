@@ -42,8 +42,7 @@ jobs:
       run: echo "TAG=${GITHUB_SHA::7}" | tee -a "$GITHUB_ENV" "$GITHUB_OUTPUT"
 
     - name: Tag image
-      run: docker tag dvwa:latest \
-           ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
+      run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
 
     # ----------------------------------------------------------------------
     # 4. Install & configure JFrog CLI (OIDC)
