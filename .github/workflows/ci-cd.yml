@@ -50,11 +50,11 @@ jobs:
     #                              JFROG_CLI_BUILD_NUMBER = run number
     # ----------------------------------------------------------------------
     - uses: jfrog/setup-jfrog-cli@v4
-      with:
-        oidc-provider-name: evidence     # must match the provider name in Artifactory
       env:
-        JF_URL: ${{ vars.JF_URL }}       # e.g. https://acme.jfrog.io
-
+          JF_URL: https://accenture2025.jfrog.io 
+      with:
+          oidc-provider-name: evidence 
+        
     - name: Verify CLI config
       run: jf config show
 
