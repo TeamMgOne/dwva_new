@@ -35,8 +35,8 @@ jobs:
         run: |
           jf --version
           jf config show
-          jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/evidence-repo:${{ github.run_id }}
-          jfrog rt docker-push accenture2025.jfrog.io/evidence-repo:${{ github.run_id }} evidence-repo
+          jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/evidence-repo/ron:${{ github.run_id }}
+          jfrog rt docker-push accenture2025.jfrog.io/evidence-repo/ron:${{ github.run_id }} evidence-repo
           jfrog rt build-publish
 
       - name: Create evidence for build
