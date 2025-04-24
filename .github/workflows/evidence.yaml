@@ -35,10 +35,9 @@ jobs:
         run: |
           jf --version
           jf config show
-          cat DockerFile
-#          jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/generic-local/oidc-tokens:${{ github.run_id }}
-#          jfrog rt docker-push accenture2025.jfrog.io/generic-local/oidc-tokens:${{ github.run_id }} generic-local
-#          jfrog rt build-publish
+          jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/docker-dev/dvwa:${{ github.run_id }}
+          jfrog rt docker-push accenture2025.jfrog.io/docker-dev/dvwa:${{ github.run_id }} docker-dev
+          jfrog rt build-publish
 
 #      - name: Create evidence for build
 #        run: |
