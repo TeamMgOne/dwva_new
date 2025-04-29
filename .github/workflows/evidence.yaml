@@ -40,6 +40,7 @@ jobs:
           echo "${{ secrets.CA_CERT_PEM }}" > custom-ca.crt
           sudo cp custom-ca.crt /usr/local/share/ca-certificates/custom-ca.crt
           sudo update-ca-certificates
+          git config --global http.sslCAinfo /etc/ssl/certs/ca-certificates.crt
 
       - name: Setup Jfrog CLI 
         uses: jfrog/setup-jfrog-cli@v4
