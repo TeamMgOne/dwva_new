@@ -32,6 +32,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Disable Git SSL verification
+        run: git config --global http.sslVerify false
+
       - name: Add Internal CA to Trust Store
         run: |
           echo "${{ secrets.CA_CERT_PEM }}" > custom-ca.crt
