@@ -29,11 +29,24 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
       - uses: actions/checkout@v4
-      - uses: jfrog/setup-jfrog-cli@v4
+
+      - name: Add Internal CA to Trust Store
+        run: |
+          echo "${{ secrets.CA_CERT_PEM }}" > custom-ca.crt
+          sudo cp custom-ca.crt /usr/local/share/ca-certificates/custom-ca.crt
+          sudo update-ca-certificates
+
+      - name: Setup Jfrog CLI 
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ env.JF_URL }}
+          HTTP_PROXY: ${{ env.HTTP_PROXY }}
+          HTTPS_PROXY: ${{ env.HTTPS_PROXY }}        
         with:
           oidc-provider-name: evidence
-      - name: Setup JFrog CLI
+      - name: Test
         run: |
           jf --version
           jf config show
