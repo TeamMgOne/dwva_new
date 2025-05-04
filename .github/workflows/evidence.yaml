@@ -18,8 +18,6 @@ on:
 jobs:
   moti-jfrog-cli:
     env:
-      HTTP_PROXY: 7.tcp.eu.ngrok.io:16312
-      HTTPS_PROXY: 7.tcp.eu.ngrok.io:16312
       IMG_NAME: ${{ github.repository }}
       JF_URL: "https://accenture2025.jfrog.io/"
       JFROG_CLI_BUILD_NAME: "dvwa-ci"
@@ -29,47 +27,25 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Disable Git SSL verification
-        run: git config --global http.sslVerify false
-
-      - name: Add Internal CA to Trust Store
-        run: |
-          echo "${{ secrets.CA_CERT_PEM }}" > custom-ca.crt
-          sudo cp custom-ca.crt /usr/local/share/ca-certificates/custom-ca.crt
-          sudo update-ca-certificates
-          git config --global http.sslCAinfo /etc/ssl/certs/ca-certificates.crt
-
-      - name: Setup Jfrog CLI 
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: ${{ env.JF_URL }}
-          HTTP_PROXY: ${{ env.HTTP_PROXY }}
-          HTTPS_PROXY: ${{ env.HTTPS_PROXY }}        
+      - uses: actions/checkout@v4
+      - uses: jfrog/setup-jfrog-cli@v4
         with:
           oidc-provider-name: evidence
-      - name: Test
+      - name: Setup JFrog CLI
         run: |
           jf --version
           jf config show
           jfrog docker build . --file Dockerfile --tag accenture2025.jfrog.io/docker-dev/dvwa:${{ github.run_id }}
           jfrog rt docker-push accenture2025.jfrog.io/docker-dev/dvwa:${{ github.run_id }} docker-dev
           jfrog rt build-publish
-
       - name: Create evidence for build
         run: |
           openssl genrsa -out private.pem 2048
           openssl rsa -in private.pem -pubout -out public.pem
-
           echo "{
             \"name\": \"${{ github.workflow }}\",
             \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
             \"initiator\": \"${{ github.actor }}\"
           }" > run_info.json
-
           jf evd create --predicate ./run_info.json --predicate-type https://in-toto.io/attestation/test-result/v0.1 --build-name $JFROG_CLI_BUILD_NAME --build-number $JFROG_CLI_BUILD_NUMBER --key ./private.pem
-
-
 #          jfrog rt bdc workshop-docker-local --image-file image-file-details --build-name $build-name --build-number $build-number
