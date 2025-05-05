@@ -21,6 +21,21 @@ jobs:
     - uses: actions/checkout@v3
 
     # ----------------------------------------------------------------------
+    # 4. Install & configure JFrog CLI (OIDC)
+    #    *Automatically sets* JFROG_CLI_BUILD_NAME = workflow name
+    #                              JFROG_CLI_BUILD_NUMBER = run number
+    # ----------------------------------------------------------------------
+   
+    - uses: jfrog/setup-jfrog-cli@v4
+      env:
+          JF_URL: https://accenture2025.jfrog.io 
+      with:
+          oidc-provider-name: evidence 
+        
+    - name: Verify CLI config
+      run: jf config show
+      
+    # ----------------------------------------------------------------------
     # 2. Docker login (plain Docker – registry creds still needed)
     # ----------------------------------------------------------------------
     - name: Docker login to Artifactory
@@ -38,34 +53,6 @@ jobs:
 
     - name: Tag image
       run: docker tag dvwa:latest ${{ secrets.DOCKER_REPO_DEV }}/docker-dev/dvwa:dev-$TAG
-
-    # ----------------------------------------------------------------------
-    # 4. Install & configure JFrog CLI (OIDC)
-    #    *Automatically sets* JFROG_CLI_BUILD_NAME = workflow name
-    #                              JFROG_CLI_BUILD_NUMBER = run number
-    # ----------------------------------------------------------------------
-    - name: Debug OIDC discovery endpoint
-      run: |
-        set -e
-        URL="${{ vars.JF_URL }}/access/.well-known/openid-configuration"
-        echo "Probing $URL"
-        STATUS=$(curl -o /dev/null -w '%{http_code}' "$URL")
-        echo "HTTP status: $STATUS"
-        if [ "$STATUS" != "200" ]; then
-          echo "Endpoint unreachable or misconfigured"
-          exit 1
-        fi
-        curl -sSL "$URL" | head -20   # show first lines of JSON
-  
-      
-    - uses: jfrog/setup-jfrog-cli@v4
-      env:
-          JF_URL: https://accenture2025.jfrog.io 
-      with:
-          oidc-provider-name: evidence 
-        
-    - name: Verify CLI config
-      run: jf config show
 
     # ----------------------------------------------------------------------
     # 5. Push image *with* build-info in one command
