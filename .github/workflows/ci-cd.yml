@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-and-push-dev:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       tag: ${{ steps.set_tag.outputs.tag }}
 
