@@ -23,11 +23,6 @@ jobs:
     # ----------------------------------------------------------------------
     # 2. Docker login (plain Docker – registry creds still needed)
     # ----------------------------------------------------------------------
-    - name: Sanity check runner
-      run: |
-        uname -a
-        which docker || echo "Docker missing"
-
     - name: Docker login to Artifactory
       run: echo '${{ secrets.JFROG_PASSWORD }}' |docker login ${{ secrets.DOCKER_REPO_DEV }} --username ${{ secrets.JFROG_USERNAME }} --password-stdin
 
