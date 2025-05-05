@@ -22,6 +22,8 @@ jobs:
       JF_URL: "https://accenture2025.jfrog.io/"
       JFROG_CLI_BUILD_NAME: "dvwa-ci"
       JFROG_CLI_BUILD_NUMBER: ${{ github.run_id }}
+      HTTP_PROXY:  http://a570-176-228-70-174.ngrok-free.app
+      HTTPS_PROXY: http://a570-176-228-70-174.ngrok-free.app
     permissions:
       id-token: write
       contents: read
