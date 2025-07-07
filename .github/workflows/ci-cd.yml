@@ -30,7 +30,7 @@ jobs:
       env:
           JF_URL: https://accenture2025.jfrog.io 
       with:
-          oidc-provider-name: evidence 
+          oidc-provider-name: aaron 
         
     - name: Verify CLI config
       run: jf config show
